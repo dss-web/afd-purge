@@ -1,20 +1,20 @@
 <?php declare( strict_types = 1 );
 
  /**
-  * Summary of namespace Soderlind\Azure\Oauth2
+  * Summary of namespace Soderlind\Azure\OAuth2
   *
   * @see https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-oauth2-auth-code-flow
   */
 
-namespace Soderlind\Azure\Oauth2;
+namespace Soderlind\Azure\OAuth2;
 
-interface Azure_Oauth2_Interface {
+interface Azure_OAuth2_Interface {
 	public function get_authorization_code();
 	public function get_access_token( string $authorization_code);
-	public function refresh_access_token( string $refresh_token ):
+	public function refresh_access_token( string $refresh_token );
 }
 
-final class Azure_Outh2  implements Azure_Oauth2_Interface {
+final class Azure_OAuth2  implements Azure_OAuth2_Interface {
 	private $authorization_url_template = 'https://login.microsoftonline.com/{tenant}/oauth2/authorize';
 	private $access_token_url_template  = 'https://login.microsoftonline.com/{tenant}/oauth2/token';
 
@@ -59,20 +59,21 @@ final class Azure_Outh2  implements Azure_Oauth2_Interface {
 		add_filter('https_ssl_verify', '__return_false');
 		$request = wp_remote_request(
 			$this->$authorization_url, $this->request_args(
+				'GET',
 				[
 					'response_type' => 'code',
-					'state'         => wp_create_nonce('afd-purge'),
+					'state'         => wp_create_nonce('azure-oauth2'),
 				]
 			)
 		);
 
-		if ( is_wp_error($request) ) {
-			return false; //TODO: Throw Exception ?
+		if (is_a($request, 'WP_Error')) {
+			throw new \Exception($request->get_error_message());
 		}
 
 		$response = json_decode(wp_remote_retrieve_body($request));
 
-		if ( true === $response['admin_consent'] && wp_verify_nonce('afd-purge', $response['state']) ) {
+		if ( true === $response['admin_consent'] && wp_verify_nonce('azure-oauth2', $response['state']) ) {
 			return $response['code'];
 		} else {
 			return false;
@@ -92,6 +93,7 @@ final class Azure_Outh2  implements Azure_Oauth2_Interface {
 		add_filter('https_ssl_verify', '__return_false');
 		$request = wp_remote_request(
 			$this->$access_token_url, $this->request_args(
+				'POST',
 				[
 					'code'       => $authorization_code,
 					'grant_type' => 'authorization_code',
@@ -99,16 +101,10 @@ final class Azure_Outh2  implements Azure_Oauth2_Interface {
 			)
 		);
 
-		if ( is_wp_error($request) ) {
-			return false;
-		}
-		// TODO: Throw Exception ?
 		// from https://medium.com/the-metric/modern-wordpress-development-you-should-throw-an-exception-when-you-encounter-a-wp-error-81fb82275cbd
-		/*
-			if (is_a($results, 'WP_Error')) {
-				throw new \Exception();
-			}
-		*/
+		if (is_a($request, 'WP_Error')) {
+			throw new \Exception($request->get_error_message());
+		}
 		return json_decode(wp_remote_retrieve_body($request));
 
 	}
@@ -126,6 +122,7 @@ final class Azure_Outh2  implements Azure_Oauth2_Interface {
 		add_filter('https_ssl_verify', '__return_false');
 		$request = wp_remote_request(
 			$this->$access_token_url, $this->request_args(
+				'POST',
 				[
 					'refresh_token' => $refresh_token,
 					'grant_type'    => 'refresh_token',
@@ -133,8 +130,8 @@ final class Azure_Outh2  implements Azure_Oauth2_Interface {
 			)
 		);
 
-		if ( is_wp_error($request) ) {
-			return false; // TODO: Throw Exception ?
+		if (is_a($request, 'WP_Error')) {
+			throw new \Exception($request->get_error_message());
 		}
 
 		return json_decode(wp_remote_retrieve_body($request));
@@ -143,10 +140,11 @@ final class Azure_Outh2  implements Azure_Oauth2_Interface {
 	/**
 	 * Build request args array
 	 *
+	 * @param string $method    'GET', 'POST'
 	 * @param array $extra_args
 	 * @return array
 	 */
-	private function request_args( array $extra_args ) : array {
+	private function request_args( string $method, array $extra_args ) : array {
 		$body = [
 			'client_id'     => $this->client_id,
 			'client_secret' => $this->client_secret, // not needed for get_authorization_code(), remove ?
@@ -154,7 +152,7 @@ final class Azure_Outh2  implements Azure_Oauth2_Interface {
 			'scope'         => $this->scope,
 		];
 		return [
-			'method'      => 'POST',
+			'method'      => $method,
 			'httpversion' => '1.1',
 			'blocking'    => true,
 			'body'        => $body + $extra_args,
