@@ -27,7 +27,8 @@ final class Azure_Outh2  implements Azure_Oauth2_Interface {
 	private $tenant;
 
 	/**
-	 * Summary of __construct
+	 * __construct
+	 *
 	 * @param string $client_id
 	 * @param string $client_secret
 	 * @param string $redirect_uri
@@ -51,7 +52,7 @@ final class Azure_Outh2  implements Azure_Oauth2_Interface {
 	 *
 	 * @see https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-oauth2-auth-code-flow#request-an-authorization-code
 	 *
-	 * @return mixed
+	 * @return false|string
 	 */
 	public function get_authorization_code() {
 
@@ -83,8 +84,8 @@ final class Azure_Outh2  implements Azure_Oauth2_Interface {
 	 *
 	 * @see https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-oauth2-auth-code-flow#request-an-access-token
 	 *
-	 * @param string $authorization_code
-	 * @return mixed
+	 * @param string $authorization_code    The authorization code return by get_authorization_code()
+	 * @return false| array
 	 */
 	public function get_access_token( string $authorization_code ) {
 
@@ -99,9 +100,15 @@ final class Azure_Outh2  implements Azure_Oauth2_Interface {
 		);
 
 		if ( is_wp_error($request) ) {
-			return false; // TODO: Throw Exception ?
+			return false;
 		}
-
+		// TODO: Throw Exception ?
+		// from https://medium.com/the-metric/modern-wordpress-development-you-should-throw-an-exception-when-you-encounter-a-wp-error-81fb82275cbd
+		/*
+			if (is_a($results, 'WP_Error')) {
+				throw new \Exception();
+			}
+		*/
 		return json_decode(wp_remote_retrieve_body($request));
 
 	}
@@ -112,8 +119,8 @@ final class Azure_Outh2  implements Azure_Oauth2_Interface {
 	 *
 	 * @see https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-oauth2-auth-code-flow#refresh-the-access-token
 	 *
-	 * @param string $token
-	 * @return void
+	 * @param string $refresh_token  Refresh token return by get_access_token
+	 * @return bool|array
 	 */
 	public function refresh_access_token( string $refresh_token ) {
 		add_filter('https_ssl_verify', '__return_false');
