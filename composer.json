@@ -1,0 +1,15 @@
+{
+    "name": "soderlind/afd-purge",
+    "description": "Azure Front Door Purge",
+    "type": "wordpress-plugin",
+    "license": "GPL",
+    "authors": [
+        {
+            "name": "Per Søderlind",
+            "email": "per@soderlind.no"
+        }
+    ],
+    "require": {
+        "thenetworg/oauth2-azure": "^1.4"
+    }
+}
