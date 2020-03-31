@@ -10,10 +10,11 @@ namespace Soderlind\Azure\Oauth2;
 
 interface Azure_Oauth2_Interface {
 	public function get_authorization_code();
-	public function get_access_token();
+	public function get_access_token( string $authorization_code);
+	public function refresh_access_token( string $refresh_token ):
 }
 
-class Azure_Outh2  implements Azure_Oauth2_Interface {
+final class Azure_Outh2  implements Azure_Oauth2_Interface {
 	private $authorization_url_template = 'https://login.microsoftonline.com/{tenant}/oauth2/authorize';
 	private $access_token_url_template  = 'https://login.microsoftonline.com/{tenant}/oauth2/token';
 
@@ -53,18 +54,6 @@ class Azure_Outh2  implements Azure_Oauth2_Interface {
 	 * @return mixed
 	 */
 	public function get_authorization_code() {
-		$args = [
-			'method'      => 'GET',
-			'httpversion' => '1.1',
-			'blocking'    => true,
-			'body'        => [
-				'client_id'     => $this->client_id,
-				'redirect_uri'  => $this->$redirect_uri,
-				'scope'         => $scope,
-				'response_type' => 'code',
-				'state'         => wp_create_nonce('afd-purge'),
-			],
-		];
 
 		add_filter('https_ssl_verify', '__return_false');
 		$request = wp_remote_request(
@@ -153,7 +142,7 @@ class Azure_Outh2  implements Azure_Oauth2_Interface {
 	private function request_args( array $extra_args ) : array {
 		$body = [
 			'client_id'     => $this->client_id,
-			'client_secret' => $this->client_secret,
+			'client_secret' => $this->client_secret, // not needed for get_authorization_code(), remove ?
 			'redirect_uri'  => $this->$redirect_uri,
 			'scope'         => $this->scope,
 		];
